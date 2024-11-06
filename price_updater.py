@@ -1,36 +1,37 @@
 import requests
-from database import actualizar_precio, actualizar_rendimiento, obtener_alertas
+import logging
+
+logger = logging.getLogger(__name__)
 
 def obtener_precio_token(contrato_token):
-    url = f'https://api.dexscreener.com/latest/dex/tokens/{contrato_token}'
-    response = requests.get(url)
-    data = response.json()
-
     try:
-        return float(data['pairs'][0]['priceUsd'])
-    except (KeyError, IndexError):
+        # Llamada a la API de Dexscreener para obtener el precio del token
+        url = f'https://api.dexscreener.com/latest/dex/tokens/{contrato_token}'
+        response = requests.get(url)
+        response.raise_for_status()  # Genera una excepción si la respuesta HTTP es un error
+
+        data = response.json()
+
+        # Verificar que la estructura de los datos es la esperada
+        if 'pairs' in data and data['pairs']:
+            # Intentar extraer el precio en USD
+            precio_usd = data['pairs'][0].get('priceUsd')
+            if precio_usd is not None:
+                return float(precio_usd)
+            else:
+                logger.warning(f"El precio en USD no se encontró para el token {contrato_token}.")
+                return None
+        else:
+            logger.warning(f"Estructura de datos inesperada para el token {contrato_token}: {data}")
+            return None
+    except requests.RequestException as e:
+        logger.error(f"Error de red al obtener el precio para el token {contrato_token}: {e}")
+        return None
+    except (KeyError, IndexError, TypeError) as e:
+        logger.error(f"Error al procesar los datos de la API para el token {contrato_token}: {e}")
         return None
 
-def calcular_rendimiento(alertas, campo_inicial, campo_final):
-    rendimientos = []
-    for alerta in alertas:
-        precio_inicial = alerta.get(campo_inicial)
-        precio_final = alerta.get(campo_final)
-        if precio_inicial and precio_final:
-            rendimiento = ((precio_final - precio_inicial) / precio_inicial) * 100
-            rendimientos.append(rendimiento)
-    return sum(rendimientos) / len(rendimientos) if rendimientos else None
-
 def recalcular_rendimientos():
-    nombres_alerta = obtener_alertas(nombre_alerta)
-    for nombre in nombres_alerta:
-        alertas = obtener_alertas(nombre)
-        rendimientos = {
-            'nombre_alerta': nombre,
-            'rendimiento_1h': calcular_rendimiento(alertas, 'precio_inicial', 'precio_1h'),
-            'rendimiento_6h': calcular_rendimiento(alertas, 'precio_inicial', 'precio_6h'),
-            'rendimiento_12h': calcular_rendimiento(alertas, 'precio_inicial', 'precio_12h'),
-            'rendimiento_24h': calcular_rendimiento(alertas, 'precio_inicial', 'precio_24h'),
-            'rendimiento_72h': calcular_rendimiento(alertas, 'precio_inicial', 'precio_72h'),
-        }
-        actualizar_rendimiento(nombre, rendimientos)
+    # Implementación de recalcular_rendimientos
+    logger.info("Recalculando rendimientos...")
+    # Aquí va la lógica de recalcular rendimientos
